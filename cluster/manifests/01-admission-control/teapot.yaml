@@ -131,8 +131,8 @@ webhooks:
     sideEffects: "NoneOnDryRun"
     rules:
       - operations: ["CREATE", "UPDATE"]
-        apiGroups: ["extensions", "networking.k8s.io"]
-        apiVersions: ["v1beta1"]
+        apiGroups: ["networking.k8s.io"]
+        apiVersions: ["v1"]
         resources: ["ingresses"]
   - name: stack-admitter.teapot.zalan.do
     clientConfig:
