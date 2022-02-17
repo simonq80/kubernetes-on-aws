@@ -3,6 +3,7 @@ set -euo pipefail
 
 create_cluster=false
 e2e=false
+loadtest_e2e=false
 stackset_e2e=false
 decommission_cluster=false
 COMMAND="${1:-"all"}" # all, create-cluster, e2e, stackset-e2e, decommission-cluster
@@ -19,6 +20,9 @@ case "$COMMAND" in
         ;;
     e2e)
         e2e=true
+        ;;
+    loadtest-e2e)
+        loadtest_e2e=true
         ;;
     stackset-e2e)
         stackset_e2e=true
@@ -114,6 +118,11 @@ if [ "$create_cluster" = true ]; then
 
         # Wait for the resources to be ready
         ./wait-for-update.py --timeout 1200
+
+        # provision and start load test
+        echo "provision and start load test"
+        ZONE=$(echo "${API_SERVER_URL}" | awk -F . '{print substr($0, index($0,$2))}')
+        ./start-load-test.sh --zone "$ZONE" --target "$(date +%s)" -v --timeout 900 --wait 900
     fi
 
     # generate updated clusters.yaml
@@ -229,6 +238,12 @@ if [ "$stackset_e2e" = true ]; then
     namespace="stackset-e2e-$(date +'%H%M%S')"
     kubectl create namespace "$namespace"
     E2E_NAMESPACE="${namespace}" ./stackset-e2e -test.parallel 20
+fi
+
+if [ "$loadtest_e2e" = true ]; then
+  prometheus=$(kubectl -n loadtest-e2e get ing prometheus -o json | jq -r '.spec.rules[0].host')
+  # TODO get the data from prometheus
+  curl -s "https://${prometheus}/api/v1/query" -H"Accept: application/json"
 fi
 
 if [ "$decommission_cluster" = true ]; then
